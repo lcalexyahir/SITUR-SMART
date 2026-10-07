@@ -47,3 +47,100 @@ class UserTenant(models.Model):
         managed = False
         db_table = "usuario_tenant"
         unique_together = (("user", "tenant"),)
+
+
+class Currency(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    iso_code = models.CharField(db_column="codigo_iso", max_length=3, unique=True)
+    name = models.CharField(db_column="nombre", max_length=80)
+    symbol = models.CharField(db_column="simbolo", max_length=10)
+    decimals = models.SmallIntegerField(db_column="decimales", default=2)
+
+    class Meta:
+        managed = False
+        db_table = "moneda"
+        ordering = ("iso_code",)
+
+    def __str__(self) -> str:
+        return f"{self.iso_code} ({self.symbol})"
+
+
+class Plan(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    currency = models.ForeignKey(
+        Currency, db_column="id_moneda", on_delete=models.DO_NOTHING, related_name="plans"
+    )
+    code = models.CharField(db_column="codigo", max_length=50, unique=True)
+    name = models.CharField(db_column="nombre", max_length=100, unique=True)
+    monthly_price = models.DecimalField(db_column="precio_mensual", max_digits=12, decimal_places=2)
+    max_users = models.IntegerField(db_column="max_usuarios")
+    max_products = models.IntegerField(db_column="max_productos")
+    commission_percentage = models.DecimalField(
+        db_column="porcentaje_comision", max_digits=5, decimal_places=2, default=0
+    )
+    active = models.BooleanField(db_column="activo", default=True)
+
+    class Meta:
+        managed = False
+        db_table = "plan"
+        ordering = ("monthly_price",)
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class Subscription(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = "ACTIVA", "Activa"
+        EXPIRED = "VENCIDA", "Vencida"
+        CANCELLED = "CANCELADA", "Cancelada"
+        SUSPENDED = "SUSPENDIDA", "Suspendida"
+
+    id = models.BigAutoField(primary_key=True)
+    tenant = models.ForeignKey(
+        Tenant, db_column="id_tenant", on_delete=models.DO_NOTHING, related_name="subscriptions"
+    )
+    plan = models.ForeignKey(Plan, db_column="id_plan", on_delete=models.DO_NOTHING, related_name="subscriptions")
+    start_date = models.DateField(db_column="fecha_inicio")
+    end_date = models.DateField(db_column="fecha_fin", null=True, blank=True)
+    status = models.CharField(db_column="estado", max_length=20, choices=Status.choices, default=Status.ACTIVE)
+    auto_renew = models.BooleanField(db_column="renovacion_automatica", default=False)
+    created_at = models.DateTimeField(db_column="creado_en", auto_now_add=True)
+
+    class Meta:
+        managed = False
+        db_table = "suscripcion"
+        ordering = ("-created_at",)
+
+    def __str__(self) -> str:
+        return f"{self.tenant} - {self.plan} ({self.status})"
+
+
+class Country(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    iso_code = models.CharField(db_column="codigo_iso", max_length=3, unique=True)
+    name = models.CharField(db_column="nombre", max_length=100, unique=True)
+    created_at = models.DateTimeField(db_column="creado_en", auto_now_add=True)
+
+    class Meta:
+        managed = False
+        db_table = "pais"
+        ordering = ("name",)
+
+    def __str__(self) -> str:
+        return self.name
+
+
+class City(models.Model):
+    id = models.BigAutoField(primary_key=True)
+    country = models.ForeignKey(Country, db_column="id_pais", on_delete=models.DO_NOTHING, related_name="cities")
+    name = models.CharField(db_column="nombre", max_length=120)
+    created_at = models.DateTimeField(db_column="creado_en", auto_now_add=True)
+
+    class Meta:
+        managed = False
+        db_table = "ciudad"
+        ordering = ("name",)
+
+    def __str__(self) -> str:
+        return f"{self.name}, {self.country.name}"
