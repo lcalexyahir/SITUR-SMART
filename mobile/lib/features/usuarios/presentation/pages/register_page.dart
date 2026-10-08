@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/network/api_errors.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../data/auth_service.dart';
 
+/// Registro público de clientes (viajeros / turistas).
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -12,19 +15,28 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
+  final AuthService _authService = AuthService();
+
+  final _nombresController = TextEditingController();
+  final _apellidosController = TextEditingController();
   final _emailController = TextEditingController();
+  final _telefonoController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+  String? _errorMessage;
+
+  static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _nombresController.dispose();
+    _apellidosController.dispose();
     _emailController.dispose();
+    _telefonoController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -36,421 +48,244 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    setState(() => _isLoading = true);
-    await Future<void>.delayed(const Duration(milliseconds: 800));
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Cuenta creada correctamente.')), 
-    );
-    setState(() => _isLoading = false);
-    context.go('/login');
+    try {
+      await _authService.registerClient(
+        nombres: _nombresController.text.trim(),
+        apellidos: _apellidosController.text.trim(),
+        email: _emailController.text.trim(),
+        telefono: _telefonoController.text.trim(),
+        password: _passwordController.text,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('¡Bienvenido a SITUR-SMART! Tu cuenta fue creada.')),
+      );
+      context.go('/dashboard');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _errorMessage = apiErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final media = MediaQuery.of(context);
-    final isWide = media.size.width >= 900;
+  String? _required(String? value, String field) {
+    if (value == null || value.trim().isEmpty) return 'Ingresa tu $field.';
+    return null;
+  }
 
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return Row(
-              children: [
-                if (isWide)
-                  Expanded(
-                    flex: 11,
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(28, 28, 28, 34),
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [Color(0xFF1A7A6C), AppTheme.panelBg, Color(0xFF082E29)],
-                        ),
-                      ),
-                      child: const _BrandPanel(),
-                    ),
-                  ),
-                Expanded(
-                  flex: 9,
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(
-                        24,
-                        isWide ? 36 : 22,
-                        24,
-                        24 + media.viewInsets.bottom,
-                      ),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 430),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (!isWide) const _MobileLogo(),
-                            if (!isWide) const SizedBox(height: 20),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: TextButton.icon(
-                                onPressed: () => context.go('/login'),
-                                icon: const Icon(Icons.arrow_back_rounded, size: 18),
-                                label: const Text('Volver al inicio de sesión'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: AppTheme.accentDark,
-                                  padding: EdgeInsets.zero,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Crear cuenta',
-                              style: theme.textTheme.headlineMedium?.copyWith(fontSize: 40),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Completa el formulario para registrarte en SITUR-SMART',
-                              style: theme.textTheme.bodyLarge?.copyWith(color: AppTheme.textSecondary),
-                            ),
-                            const SizedBox(height: 20),
-                            Form(
-                              key: _formKey,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Nombre completo',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      color: AppTheme.labelColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  TextFormField(
-                                    controller: _nameController,
-                                    textInputAction: TextInputAction.next,
-                                    decoration: const InputDecoration(
-                                      hintText: 'Juan García',
-                                      suffixIcon: Icon(Icons.person_outline),
-                                    ),
-                                    validator: (value) {
-                                      if (value == null || value.trim().isEmpty) {
-                                        return 'El nombre es obligatorio.';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    'Correo electrónico',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      color: AppTheme.labelColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  TextFormField(
-                                    controller: _emailController,
-                                    keyboardType: TextInputType.emailAddress,
-                                    textInputAction: TextInputAction.next,
-                                    decoration: const InputDecoration(
-                                      hintText: 'juan@ejemplo.com',
-                                      suffixIcon: Icon(Icons.mail_outline),
-                                    ),
-                                    validator: (value) {
-                                      if (value == null || value.trim().isEmpty) {
-                                        return 'El correo es obligatorio.';
-                                      }
-                                      final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                                      if (!emailRegex.hasMatch(value.trim())) {
-                                        return 'Ingresa un correo electrónico válido.';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    'Contraseña',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      color: AppTheme.labelColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  TextFormField(
-                                    controller: _passwordController,
-                                    obscureText: _obscurePassword,
-                                    textInputAction: TextInputAction.next,
-                                    decoration: InputDecoration(
-                                      hintText: 'Mínimo 8 caracteres',
-                                      suffixIcon: IconButton(
-                                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                                        icon: Icon(
-                                          _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                                        ),
-                                      ),
-                                    ),
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'La contraseña es obligatoria.';
-                                      }
-                                      if (value.length < 8) {
-                                        return 'La contraseña debe tener al menos 8 caracteres.';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    'Confirmar contraseña',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      color: AppTheme.labelColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  TextFormField(
-                                    controller: _confirmPasswordController,
-                                    obscureText: _obscureConfirmPassword,
-                                    textInputAction: TextInputAction.done,
-                                    onFieldSubmitted: (_) => _submit(),
-                                    decoration: InputDecoration(
-                                      hintText: 'Repite tu contraseña',
-                                      suffixIcon: IconButton(
-                                        onPressed: () => setState(
-                                          () => _obscureConfirmPassword = !_obscureConfirmPassword,
-                                        ),
-                                        icon: Icon(
-                                          _obscureConfirmPassword
-                                              ? Icons.visibility_outlined
-                                              : Icons.visibility_off_outlined,
-                                        ),
-                                      ),
-                                    ),
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'Debes confirmar la contraseña.';
-                                      }
-                                      if (value != _passwordController.text) {
-                                        return 'Las contraseñas no coinciden.';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 24),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          colors: [AppTheme.accent, AppTheme.accentGradientTo],
-                                        ),
-                                        borderRadius: BorderRadius.circular(14),
-                                      ),
-                                      child: ElevatedButton(
-                                        onPressed: _isLoading ? null : _submit,
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.transparent,
-                                          shadowColor: Colors.transparent,
-                                          disabledBackgroundColor: Colors.transparent,
-                                        ),
-                                        child: _isLoading
-                                            ? const SizedBox(
-                                                height: 20,
-                                                width: 20,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2.2,
-                                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                                ),
-                                              )
-                                            : const Text('Crear cuenta'),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
+  Widget _label(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        text,
+        style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.labelColor),
       ),
     );
   }
-}
-
-class _MobileLogo extends StatelessWidget {
-  const _MobileLogo();
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          height: 44,
-          width: 44,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            color: AppTheme.panelBg,
-          ),
-          alignment: Alignment.center,
-          child: const Icon(Icons.explore, color: AppTheme.accent, size: 22),
-        ),
-        const SizedBox(width: 10),
-        const Text.rich(
-          TextSpan(
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
             children: [
-              TextSpan(
-                text: 'SITUR',
-                style: TextStyle(color: AppTheme.titleColor, fontWeight: FontWeight.w800),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _isLoading ? null : () => context.go('/login'),
+                  icon: const Icon(Icons.arrow_back),
+                  label: const Text('Volver al inicio de sesión'),
+                ),
               ),
-              TextSpan(
-                text: '-SMART',
-                style: TextStyle(color: AppTheme.accentDark, fontWeight: FontWeight.w800),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accentDark,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(Icons.travel_explore, color: Colors.white),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'SITUR-SMART',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.titleColor,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          style: TextStyle(fontSize: 24, letterSpacing: -0.4),
-        ),
-      ],
-    );
-  }
-}
-
-class _BrandPanel extends StatelessWidget {
-  const _BrandPanel();
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              height: 44,
-              width: 44,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white24),
-                color: Colors.white10,
-              ),
-              alignment: Alignment.center,
-              child: const Icon(Icons.explore, color: Colors.white, size: 22),
-            ),
-            const SizedBox(width: 10),
-            const Text(
-              'SITUR-SMART',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 30,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.6,
-              ),
-            ),
-          ],
-        ),
-        const Spacer(),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white24),
-            color: Colors.white10,
-          ),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.travel_explore_rounded, color: Colors.white, size: 18),
-              SizedBox(width: 10),
-              Text(
-                'Sistema Inteligente de Turismo',
+              const SizedBox(height: 28),
+              const Text(
+                'Crea tu cuenta de viajero',
                 style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  height: 1.15,
+                  color: AppTheme.titleColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Explora y reserva experiencias turísticas en toda Bolivia.',
+                style: TextStyle(fontSize: 15, color: AppTheme.textSecondary),
+              ),
+              const SizedBox(height: 24),
+              if (_errorMessage != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.errorColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline, color: AppTheme.errorColor),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: const TextStyle(color: AppTheme.errorColor),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              _label('Nombres'),
+              TextFormField(
+                controller: _nombresController,
+                textCapitalization: TextCapitalization.words,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  hintText: 'Juan Carlos',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+                validator: (value) => _required(value, 'nombre'),
+              ),
+              const SizedBox(height: 16),
+              _label('Apellidos'),
+              TextFormField(
+                controller: _apellidosController,
+                textCapitalization: TextCapitalization.words,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  hintText: 'García López',
+                  prefixIcon: Icon(Icons.badge_outlined),
+                ),
+                validator: (value) => _required(value, 'apellido'),
+              ),
+              const SizedBox(height: 16),
+              _label('Correo electrónico'),
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autocorrect: false,
+                decoration: const InputDecoration(
+                  hintText: 'juan@ejemplo.com',
+                  prefixIcon: Icon(Icons.mail_outline),
+                ),
+                validator: (value) {
+                  final text = (value ?? '').trim();
+                  if (text.isEmpty) return 'Ingresa tu correo.';
+                  if (!_emailPattern.hasMatch(text)) return 'Ingresa un correo válido.';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              _label('Teléfono (opcional)'),
+              TextFormField(
+                controller: _telefonoController,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  hintText: '70000000',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _label('Contraseña'),
+              TextFormField(
+                controller: _passwordController,
+                obscureText: _obscurePassword,
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  hintText: 'Mínimo 8 caracteres',
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Ingresa una contraseña.';
+                  if (value.length < 8) return 'Debe tener al menos 8 caracteres.';
+                  if (RegExp(r'^\d+$').hasMatch(value)) return 'No puede ser solo números.';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              _label('Confirmar contraseña'),
+              TextFormField(
+                controller: _confirmPasswordController,
+                obscureText: _obscureConfirmPassword,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _isLoading ? null : _submit(),
+                decoration: InputDecoration(
+                  hintText: 'Repite tu contraseña',
+                  prefixIcon: const Icon(Icons.lock_reset),
+                  suffixIcon: IconButton(
+                    icon: Icon(_obscureConfirmPassword ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Confirma tu contraseña.';
+                  if (value != _passwordController.text) return 'Las contraseñas no coinciden.';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _submit,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Crear cuenta'),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: TextButton(
+                  onPressed: _isLoading ? null : () => context.go('/login'),
+                  child: const Text('¿Ya tienes cuenta? Inicia sesión'),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 28),
-        const Text(
-          'Gestiona el turismo\nde forma inteligente',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 65,
-            fontWeight: FontWeight.w800,
-            height: 0.9,
-            letterSpacing: -1.5,
-          ),
-        ),
-        const SizedBox(height: 24),
-        const Text(
-          'Plataforma integrada para la administración, análisis y\nseguimiento de destinos turísticos en tiempo real.',
-          style: TextStyle(
-            color: Colors.white70,
-            fontSize: 20,
-            height: 1.5,
-          ),
-        ),
-        const SizedBox(height: 30),
-        const Row(
-          children: [
-            _Metric(title: '1.2K+', subtitle: 'Destinos'),
-            SizedBox(width: 32),
-            _Metric(title: '48K', subtitle: 'Visitantes'),
-            SizedBox(width: 32),
-            _Metric(title: '99.9%', subtitle: 'Disponibilidad'),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _Metric extends StatelessWidget {
-  final String title;
-  final String subtitle;
-
-  const _Metric({required this.title, required this.subtitle});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 15,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

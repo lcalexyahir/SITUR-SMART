@@ -19,6 +19,9 @@ class SubscriptionJWTAuthentication(JWTAuthentication):
     Autenticacion JWT que, despues de validar el token, verifica que la
     empresa del usuario este habilitada y con suscripcion vigente
     (modelo SaaS). Ver ensure_tenant_access.
+
+    Tambien deja el usuario en la peticion de Django (audit_user) para que
+    la bitacora confidencial sepa quien hizo cada accion.
     """
 
     def authenticate(self, request):
@@ -26,5 +29,6 @@ class SubscriptionJWTAuthentication(JWTAuthentication):
         if result is None:
             return None
         user, token = result
+        request._request.audit_user = user
         ensure_tenant_access(user, _tenant_id_from_header(request), request.method)
         return user, token

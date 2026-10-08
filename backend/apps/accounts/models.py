@@ -89,3 +89,31 @@ class PasswordResetToken(models.Model):
     class Meta:
         managed = False
         db_table = "token_recuperacion"
+
+
+class ClientProfile(models.Model):
+    """Perfil del cliente (viajero/turista). Un usuario es cliente si tiene este registro."""
+
+    class DocumentType(models.TextChoices):
+        CI = "CI", "Cédula de identidad"
+        PASSPORT = "PASAPORTE", "Pasaporte"
+
+    user = models.OneToOneField(
+        User,
+        db_column="id_usuario",
+        primary_key=True,
+        on_delete=models.DO_NOTHING,
+        related_name="client_profile",
+    )
+    document_type = models.CharField(db_column="tipo_documento", max_length=30, null=True, blank=True)
+    document_number = models.CharField(db_column="numero_documento", max_length=50, null=True, blank=True)
+    birth_date = models.DateField(db_column="fecha_nacimiento", null=True, blank=True)
+    preferences = models.JSONField(db_column="preferencias", default=dict)
+    created_at = models.DateTimeField(db_column="creado_en", auto_now_add=True)
+
+    class Meta:
+        managed = False
+        db_table = "perfil_cliente"
+
+    def __str__(self) -> str:
+        return f"Perfil de {self.user}"

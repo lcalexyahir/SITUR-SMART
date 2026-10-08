@@ -1,14 +1,7 @@
 from django.urls import path
 
-from .views import AuditLogListView
-
+from .views import SecureLogView
 
 urlpatterns = [
-
-    path(
-        "logs/",
-        AuditLogListView.as_view(),
-        name="audit-log-list",
-    ),
-
+    path("log-seguro/", SecureLogView.as_view(), name="audit-secure-log"),
 ]

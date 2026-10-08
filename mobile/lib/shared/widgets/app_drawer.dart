@@ -1,416 +1,143 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../features/dashboard/models/current_user.dart';
 
-
-class AppDrawer extends StatelessWidget {
-
-
-  final Function(int) onSelect;
-
-
-  const AppDrawer({
-
-    super.key,
-
-    required this.onSelect,
-
+/// Opción del menú lateral.
+class DrawerEntry {
+  const DrawerEntry({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    this.selected = false,
   });
 
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool selected;
+}
 
+/// Menú lateral de SITUR-SMART. Sus opciones dependen del tipo de usuario.
+class AppDrawer extends StatelessWidget {
+  const AppDrawer({
+    super.key,
+    required this.user,
+    required this.entries,
+    required this.onLogout,
+  });
+
+  final CurrentUser user;
+  final List<DrawerEntry> entries;
+  final VoidCallback onLogout;
 
   @override
   Widget build(BuildContext context) {
-
-
     return Drawer(
-
-      backgroundColor:
-          AppTheme.accentDark,
-
-
+      backgroundColor: AppTheme.panelBg,
       child: SafeArea(
-
         child: Column(
-
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
-
             Padding(
-
-              padding:
-                  const EdgeInsets.all(20),
-
+              padding: const EdgeInsets.fromLTRB(20, 20, 12, 16),
               child: Row(
-
                 children: [
-
-
+                  const Icon(Icons.travel_explore, color: AppTheme.accent, size: 28),
+                  const SizedBox(width: 10),
                   const Expanded(
-
                     child: Text(
-
                       'SITUR-SMART',
-
                       style: TextStyle(
-
                         color: Colors.white,
-
-                        fontSize: 22,
-
-                        fontWeight:
-                            FontWeight.bold,
-
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
                       ),
-
                     ),
-
                   ),
-
-
-
                   IconButton(
-
-                    icon: const Icon(
-
-                      Icons.close,
-
-                      color: Colors.white,
-
-                    ),
-
-                    onPressed: () {
-
-                      Navigator.pop(context);
-
-                    },
-
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
-
                 ],
-
               ),
-
             ),
-
-
-
-
-            _item(
-
-              context,
-
-              Icons.dashboard_outlined,
-
-              'Dashboard',
-
-              0,
-
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                children: entries
+                    .map(
+                      (entry) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: ListTile(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          tileColor: entry.selected ? Colors.white.withValues(alpha: 0.12) : null,
+                          leading: Icon(entry.icon, color: Colors.white),
+                          title: Text(
+                            entry.label,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: entry.selected ? FontWeight.bold : FontWeight.w500,
+                            ),
+                          ),
+                          onTap: () {
+                            Navigator.of(context).pop();
+                            entry.onTap();
+                          },
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
             ),
-
-
-
-            _item(
-
-              context,
-
-              Icons.explore_outlined,
-
-              'Explorar',
-
-              1,
-
-            ),
-
-
-
-            _item(
-
-              context,
-
-              Icons.person_outline,
-
-              'Mi Perfil',
-
-              2,
-
-            ),
-
-
-
-            _item(
-
-              context,
-
-              Icons.business_outlined,
-
-              'Empresas',
-
-              3,
-
-            ),
-
-
-
-            _item(
-
-              context,
-
-              Icons.security_outlined,
-
-              'Roles y permisos',
-
-              4,
-
-            ),
-
-
-
-            _item(
-
-              context,
-
-              Icons.inventory_2_outlined,
-
-              'Catálogo',
-
-              5,
-
-            ),
-
-
-
-            _item(
-
-              context,
-
-              Icons.history,
-
-              'Bitácora',
-
-              6,
-
-            ),
-
-
-
-
-            const Spacer(),
-
-
-
-
-
             Container(
-
-              margin:
-                  const EdgeInsets.all(16),
-
-
-              padding:
-                  const EdgeInsets.all(12),
-
-
-              decoration:
-
-                  BoxDecoration(
-
-                color:
-                    Colors.black12,
-
-                borderRadius:
-
-                    BorderRadius.circular(14),
-
+              margin: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(14),
               ),
-
-
-
-              child:
-
-                  const Row(
-
+              child: Row(
                 children: [
-
-
-
                   CircleAvatar(
-
-                    backgroundColor:
-
-                        AppTheme.accent,
-
-                    child:
-
-                        Icon(
-
-                      Icons.person,
-
-                      color:
-                          Colors.white,
-
+                    backgroundColor: AppTheme.accent,
+                    child: Text(
+                      user.iniciales,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                     ),
-
                   ),
-
-
-
-                  SizedBox(
-
-                    width:12,
-
-                  ),
-
-
-
+                  const SizedBox(width: 12),
                   Expanded(
-
-                    child:
-
-                        Column(
-
-                      crossAxisAlignment:
-
-                          CrossAxisAlignment.start,
-
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-
-
-
                         Text(
-
-                          'Administrador',
-
-                          style:
-
-                              TextStyle(
-
-                            color:
-                                Colors.white,
-
-                            fontWeight:
-
-                                FontWeight.bold,
-
-                          ),
-
+                          user.nombreCompleto,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                         ),
-
-
-
                         Text(
-
-                          'SUPER_ADMIN',
-
-                          style:
-
-                              TextStyle(
-
-                            color:
-
-                                Colors.white70,
-
-                          ),
-
+                          user.rolPrincipal,
+                          style: const TextStyle(color: Colors.white70, fontSize: 12),
                         ),
-
-
                       ],
-
                     ),
-
                   ),
-
-
+                  IconButton(
+                    tooltip: 'Cerrar sesión',
+                    icon: const Icon(Icons.logout, color: Colors.white70),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      onLogout();
+                    },
+                  ),
                 ],
-
               ),
-
             ),
-
-
-
           ],
-
         ),
-
       ),
-
     );
-
   }
-
-
-
-
-
-
-
-  Widget _item(
-
-    BuildContext context,
-
-    IconData icon,
-
-    String texto,
-
-    int index,
-
-  ){
-
-
-    return ListTile(
-
-
-      leading:
-
-          Icon(
-
-        icon,
-
-        color:
-            Colors.white,
-
-      ),
-
-
-
-      title:
-
-          Text(
-
-        texto,
-
-        style:
-
-            const TextStyle(
-
-          color:
-              Colors.white,
-
-          fontSize: 16,
-
-        ),
-
-      ),
-
-
-
-      onTap: () {
-
-
-        Navigator.pop(context);
-
-
-        onSelect(index);
-
-
-      },
-
-
-    );
-
-  }
-
-
 }

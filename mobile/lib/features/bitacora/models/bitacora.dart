@@ -1,190 +1,84 @@
-/// Modelo de un registro de auditoría.
+/// Registro de la bitácora confidencial.
 ///
-/// Corresponde a la tabla:
-/// bitacora
-
+/// La fecha y la hora llegan del servidor ya en hora de Bolivia
+/// (America/La_Paz, UTC-4), así que se muestran tal cual, sin convertirlas
+/// a la zona horaria del celular.
 class Bitacora {
-
-
-  final int id;
-
-  final String? usuario;
-
-  final String? correo;
-
-  final String accion;
-
-  final String entidad;
-
-  final String? entidadId;
-
-  final String? empresa;
-
-  final Map<String,dynamic>? datosAnteriores;
-
-  final Map<String,dynamic>? datosNuevos;
-
+  final String id;
+  final String fecha;
+  final String hora;
   final String? ip;
-
-  final String? userAgent;
-
-  final String? requestId;
-
-  final DateTime fecha;
-
-
+  final int? usuarioId;
+  final String? usuario;
+  final String? correo;
+  final String accion;
+  final String? metodo;
+  final String? ruta;
+  final int? estado;
 
   const Bitacora({
-
     required this.id,
-
-    this.usuario,
-
-    this.correo,
-
-    required this.accion,
-
-    required this.entidad,
-
-    this.entidadId,
-
-    this.empresa,
-
-    this.datosAnteriores,
-
-    this.datosNuevos,
-
-    this.ip,
-
-    this.userAgent,
-
-    this.requestId,
-
     required this.fecha,
-
+    required this.hora,
+    required this.ip,
+    required this.usuarioId,
+    required this.usuario,
+    required this.correo,
+    required this.accion,
+    required this.metodo,
+    required this.ruta,
+    required this.estado,
   });
 
-
-
-  factory Bitacora.fromJson(
-      Map<String,dynamic> json
-  ){
-
-    final user =
-        json['usuario'] ?? json['user'];
-
-
-
+  factory Bitacora.fromJson(Map<String, dynamic> json) {
     return Bitacora(
-
-      id:
-          json['id'] ?? 0,
-
-
-      usuario:
-          user is Map
-          ? user['nombre']?.toString()
-          : user?.toString(),
-
-
-      correo:
-          user is Map
-          ? user['correo']?.toString()
-          : null,
-
-
-      empresa:
-          json['empresa']?.toString(),
-
-
-      accion:
-          (json['accion'] ??
-           json['action'] ??
-           '')
-          .toString(),
-
-
-      entidad:
-          (json['entidad'] ??
-           json['entity'] ??
-           '')
-          .toString(),
-
-
-      entidadId:
-          (
-            json['entidad_id'] ??
-            json['entity_id']
-          )?.toString(),
-
-
-
-      datosAnteriores:
-
-          json['datos_anteriores'] != null
-
-          ? Map<String,dynamic>.from(
-              json['datos_anteriores']
-            )
-
-          :
-
-          json['previous_data'] != null
-
-          ? Map<String,dynamic>.from(
-              json['previous_data']
-            )
-
-          : null,
-
-
-
-      datosNuevos:
-
-          json['datos_nuevos'] != null
-
-          ? Map<String,dynamic>.from(
-              json['datos_nuevos']
-            )
-
-          :
-
-          json['new_data'] != null
-
-          ? Map<String,dynamic>.from(
-              json['new_data']
-            )
-
-          : null,
-
-
-
-      ip:
-          json['ip']?.toString(),
-
-
-      userAgent:
-          json['user_agent']?.toString(),
-
-
-      requestId:
-          json['request_id']?.toString(),
-
-
-
-      fecha:
-
-          DateTime.parse(
-
-            (
-              json['fecha'] ??
-              json['created_at']
-            ).toString()
-
-          ),
-
+      id: (json['id'] ?? '').toString(),
+      fecha: (json['fecha'] ?? '').toString(),
+      hora: (json['hora'] ?? '').toString(),
+      ip: json['ip'] as String?,
+      usuarioId: json['usuario_id'] as int?,
+      usuario: json['usuario'] as String?,
+      correo: json['correo'] as String?,
+      accion: (json['accion'] ?? '').toString(),
+      metodo: json['metodo'] as String?,
+      ruta: json['ruta'] as String?,
+      estado: json['estado'] as int?,
     );
-
   }
 
+  /// Nombre a mostrar: usuario, o su correo, o "Visitante" si no inició sesión.
+  String get quien {
+    final nombre = (usuario ?? '').trim();
+    if (nombre.isNotEmpty) return nombre;
+    final mail = (correo ?? '').trim();
+    return mail.isNotEmpty ? mail : 'Visitante';
+  }
+
+  bool get fueRechazada => (estado ?? 0) >= 400;
+}
+
+/// Resultado de una consulta a la bitácora.
+class BitacoraResultado {
+  final int total;
+  final int mostrando;
+  final String zonaHoraria;
+  final List<Bitacora> registros;
+
+  const BitacoraResultado({
+    required this.total,
+    required this.mostrando,
+    required this.zonaHoraria,
+    required this.registros,
+  });
+
+  factory BitacoraResultado.fromJson(Map<String, dynamic> json) {
+    return BitacoraResultado(
+      total: (json['total'] as int?) ?? 0,
+      mostrando: (json['mostrando'] as int?) ?? 0,
+      zonaHoraria: (json['zona_horaria'] as String?) ?? 'America/La_Paz (UTC-04:00)',
+      registros: (json['registros'] as List<dynamic>? ?? [])
+          .map((item) => Bitacora.fromJson(item as Map<String, dynamic>))
+          .toList(),
+    );
+  }
 }

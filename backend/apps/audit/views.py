@@ -1,193 +1,69 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
+from drf_spectacular.utils import extend_schema
+from rest_framework import serializers, status
+from rest_framework.exceptions import APIException, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from .models import AuditLog
-
-
-
-
-
-class AuditLogListView(APIView):
-
-    permission_classes = (
-        IsAuthenticated,
-    )
+from . import secure_log
 
 
+class SecureLogNotAvailable(APIException):
+    """La bitácora confidencial no tiene sus llaves configuradas (HTTP 503)."""
 
-    def get(
-        self,
-        request
-    ):
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    default_detail = "La bitácora confidencial no está configurada en el servidor."
+    default_code = "bitacora_no_configurada"
 
 
-        logs = (
+class SecureLogQuerySerializer(serializers.Serializer):
+    llave = serializers.CharField(trim_whitespace=False)
+    desde = serializers.DateField(required=False, allow_null=True)
+    hasta = serializers.DateField(required=False, allow_null=True)
+    usuario = serializers.CharField(required=False, allow_blank=True, default="")
+    accion = serializers.CharField(required=False, allow_blank=True, default="")
+    ip = serializers.CharField(required=False, allow_blank=True, default="")
 
-            AuditLog.objects
+    def validate(self, attrs):
+        desde, hasta = attrs.get("desde"), attrs.get("hasta")
+        if desde and hasta and desde > hasta:
+            raise serializers.ValidationError({"desde": "La fecha 'desde' no puede ser posterior a 'hasta'."})
+        return attrs
 
-            .select_related(
-                "user",
-                "tenant",
-            )
 
-            .all()
+class SecureLogView(APIView):
+    """
+    Consulta de la bitácora confidencial. Solo responde si se presenta la
+    llave única del desarrollador; cada intento queda registrado.
+    """
 
-            .order_by(
-                "-created_at"
-            )[:100]
+    permission_classes = (IsAuthenticated,)
 
+    @extend_schema(request=SecureLogQuerySerializer, responses={200: None})
+    def post(self, request):
+        if not secure_log.is_configured():
+            raise SecureLogNotAvailable()
+
+        serializer = SecureLogQuerySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        if not secure_log.verify_developer_key(data["llave"]):
+            # El intento queda registrado por SecureAuditMiddleware (código 403).
+            raise PermissionDenied("La llave del desarrollador no es válida.")
+
+        registros, total = secure_log.read(
+            date_from=data.get("desde"),
+            date_to=data.get("hasta"),
+            user_text=data["usuario"],
+            action_text=data["accion"],
+            ip_text=data["ip"],
         )
-
-
-
-        data = []
-
-
-
-        for log in logs:
-
-
-
-            data.append(
-
-                {
-
-                    "id":
-                        log.id,
-
-
-
-                    "usuario":
-
-                        {
-
-                            "id":
-                                log.user_id,
-
-
-                            "nombre":
-
-                                (
-
-                                    f"{log.user.first_names} {log.user.last_names}"
-
-                                    if log.user
-
-                                    else "Sistema"
-
-                                ),
-
-
-
-                            "correo":
-
-                                (
-
-                                    log.user.email
-
-                                    if log.user
-
-                                    else None
-
-                                ),
-
-                        },
-
-
-
-
-
-                    "empresa":
-
-                        (
-
-                            log.tenant.trade_name
-
-                            if log.tenant
-
-                            else None
-
-                        ),
-
-
-
-
-
-                    "accion":
-
-                        log.action,
-
-
-
-
-
-                    "entidad":
-
-                        log.entity,
-
-
-
-
-
-                    "entidad_id":
-
-                        log.entity_id,
-
-
-
-
-
-                    "datos_anteriores":
-
-                        log.previous_data,
-
-
-
-
-
-                    "datos_nuevos":
-
-                        log.new_data,
-
-
-
-
-
-                    "ip":
-
-                        log.ip,
-
-
-
-
-
-                    "user_agent":
-
-                        log.user_agent,
-
-
-
-
-
-                    "request_id":
-
-                        log.request_id,
-
-
-
-
-
-                    "fecha":
-
-                        log.created_at,
-
-                }
-
-            )
-
-
-
         return Response(
-            data
+            {
+                "zona_horaria": "America/La_Paz (UTC-04:00)",
+                "total": total,
+                "mostrando": len(registros),
+                "registros": registros,
+            }
         )

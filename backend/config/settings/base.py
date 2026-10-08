@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "apps.tenancy",
     "apps.rbac",
     "apps.audit",
+    "apps.catalogo",
 ]
 
 MIDDLEWARE = [
@@ -78,6 +79,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "apps.audit.middleware.RequestIdMiddleware",
+    # Bitácora confidencial: registra cada acción de los usuarios (cifrada).
+    "apps.audit.middleware.SecureAuditMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -158,3 +161,14 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "0.1.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }
+
+# ---------------------------------------------------------------------------
+# Bitácora confidencial (archivo cifrado, fuera de la base de datos)
+# - AUDIT_LOG_DIR: carpeta de los archivos. En Railway debe apuntar a un
+#   Volume (por ejemplo /data/bitacora) para que no se borre en cada deploy.
+# - AUDIT_LOG_KEY: clave de cifrado (python manage.py generar_llaves_bitacora).
+# - AUDIT_DEVELOPER_KEY_HASH: hash SHA-256 de la llave del desarrollador.
+# ---------------------------------------------------------------------------
+AUDIT_LOG_DIR = Path(os.getenv("AUDIT_LOG_DIR", str(BASE_DIR / "logs" / "bitacora")))
+AUDIT_LOG_KEY = os.getenv("AUDIT_LOG_KEY", "")
+AUDIT_DEVELOPER_KEY_HASH = os.getenv("AUDIT_DEVELOPER_KEY_HASH", "")

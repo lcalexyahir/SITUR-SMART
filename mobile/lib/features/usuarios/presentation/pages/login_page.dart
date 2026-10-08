@@ -1,12 +1,7 @@
-// Archivo actualizado:
-// - Eliminado usuario demo.
-// - Eliminados datos de prueba.
-// - Login guarda usuario autenticado.
-// - Comentarios únicamente por clase y función.
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/network/api_errors.dart';
 import '../../../../core/storage/token_storage.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../data/auth_service.dart';
@@ -36,8 +31,6 @@ class _LoginPageState extends State<LoginPage> {
 
   bool _isLoading = false;
 
-  bool _rememberMe = false;
-
   String? _errorMessage;
 
 
@@ -50,6 +43,7 @@ class _LoginPageState extends State<LoginPage> {
 
 
   /// Realiza autenticación y guarda la sesión del usuario.
+  /// La sesión queda guardada hasta que el usuario cierre sesión.
   Future<void> _submit() async {
 
     FocusScope.of(context).unfocus();
@@ -100,7 +94,7 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = apiErrorMessage(e);
       });
 
 
@@ -179,6 +173,12 @@ class _LoginPageState extends State<LoginPage> {
 
                     controller: _emailController,
 
+                    keyboardType: TextInputType.emailAddress,
+
+                    autocorrect: false,
+
+                    textInputAction: TextInputAction.next,
+
                     decoration:
                         const InputDecoration(
                       labelText: 'Correo electrónico',
@@ -205,6 +205,14 @@ class _LoginPageState extends State<LoginPage> {
                     controller: _passwordController,
 
                     obscureText: _obscurePassword,
+
+                    textInputAction: TextInputAction.done,
+
+                    onFieldSubmitted: (_) {
+                      if (!_isLoading) {
+                        _submit();
+                      }
+                    },
 
                     decoration: InputDecoration(
 
@@ -245,33 +253,20 @@ class _LoginPageState extends State<LoginPage> {
                   ),
 
 
-                  const SizedBox(height: 15),
-
-
-                  Row(
-
-                    children: [
-
-                      Checkbox(
-                        value: _rememberMe,
-
-                        onChanged: (value) {
-
-                          setState(() {
-                            _rememberMe = value ?? false;
-                          });
-
-                        },
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _isLoading
+                          ? null
+                          : () => context.push('/recuperar-password'),
+                      child: const Text(
+                        '¿Olvidaste tu contraseña?',
                       ),
-
-                      const Text(
-                        'Recordarme',
-                      ),
-                    ],
+                    ),
                   ),
 
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
 
                   SizedBox(
@@ -289,10 +284,47 @@ class _LoginPageState extends State<LoginPage> {
 
                       child:
                           _isLoading
-                              ? const CircularProgressIndicator()
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
                               : const Text(
                                   'Iniciar sesión',
                                 ),
+                    ),
+                  ),
+
+
+                  const SizedBox(height: 24),
+
+
+                  Center(
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        const Text(
+                          '¿No tienes una cuenta?',
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _isLoading
+                              ? null
+                              : () => context.push('/registrar-usuario'),
+                          child: const Text(
+                            'Crear cuenta',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
@@ -373,21 +405,40 @@ class _ErrorMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
 
-    return Padding(
+    return Container(
 
-      padding:
-          const EdgeInsets.only(
-            bottom: 16,
+      width: double.infinity,
+
+      margin: const EdgeInsets.only(bottom: 16),
+
+      padding: const EdgeInsets.all(12),
+
+      decoration: BoxDecoration(
+        color: AppTheme.errorColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+
+      child: Row(
+
+        children: [
+
+          const Icon(
+            Icons.error_outline,
+            color: AppTheme.errorColor,
           ),
 
-      child: Text(
+          const SizedBox(width: 10),
 
-        message,
-
-        style:
-            const TextStyle(
-              color: Colors.red,
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: AppTheme.errorColor,
+              ),
             ),
+          ),
+
+        ],
       ),
     );
   }

@@ -5,14 +5,20 @@ import '../../features/suscripciones/presentation/subscription_inactive_page.dar
 import '../../features/usuarios/presentation/pages/forgot_password_page.dart';
 import '../../features/usuarios/presentation/pages/login_page.dart';
 import '../../features/usuarios/presentation/pages/register_page.dart';
+import '../../features/usuarios/presentation/pages/splash_page.dart';
 import '../../features/usuarios/presentation/pages/users_page.dart';
 
 class AppRouter {
   AppRouter._();
 
   static final GoRouter router = GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/',
     routes: <RouteBase>[
+      GoRoute(
+        path: '/',
+        name: 'inicio',
+        builder: (context, state) => const SplashPage(),
+      ),
       GoRoute(
         path: '/login',
         name: 'login',
