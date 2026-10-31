@@ -5,6 +5,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_errors.dart';
 import '../../../shared/widgets/app_drawer.dart';
 import '../../../shared/widgets/coming_soon_page.dart';
+import '../../../shared/widgets/notification_bell.dart';
 import '../../../shared/widgets/situr_app_bar.dart';
 import '../../../shared/widgets/situr_bottom_nav.dart';
 import '../../bitacora/presentation/bitacora_page.dart';
@@ -13,6 +14,14 @@ import '../../cliente/presentation/client_profile_page.dart';
 import '../../dashboard/data/current_user_service.dart';
 import '../../dashboard/models/current_user.dart';
 import '../../dashboard/presentation/dashboard_page.dart';
+import '../../favoritos/data/favorito_service.dart';
+import '../../favoritos/presentation/favoritos_page.dart';
+import '../../itinerarios/presentation/itinerarios_page.dart';
+import '../../notificaciones/data/notificacion_service.dart';
+import '../../notificaciones/presentation/notificaciones_page.dart';
+import '../../pagos/presentation/mis_pagos_page.dart';
+import '../../paquetes/presentation/paquetes_page.dart';
+import '../../resenas/presentation/mis_resenas_page.dart';
 import '../../roles/presentation/roles_page.dart';
 import '../../tenants/presentation/tenants_list_page.dart';
 import '../../usuarios/data/auth_service.dart';
@@ -35,8 +44,9 @@ class _Section {
 
 /// Estructura principal de la app. Muestra secciones distintas según el
 /// tipo de usuario:
-/// - Cliente (viajero): Explorar, Mis viajes, Itinerarios, Favoritos,
-///   Notificaciones y Mi perfil (igual que la web). Entra directo a Explorar.
+/// - Cliente (viajero): Explorar, Mis paquetes (CU39), Mis viajes, Mis pagos,
+///   Itinerarios, Favoritos, Notificaciones (CU45), Mis reseñas (CU35) y
+///   Mi perfil (mismo orden que la web). Entra directo a Explorar.
 /// - Personal y SuperAdmin: Inicio, Usuarios, Roles y Bitácora.
 class MainShellPage extends StatefulWidget {
   const MainShellPage({
@@ -85,6 +95,9 @@ class _MainShellPageState extends State<MainShellPage> {
   }
 
   Future<void> _logout() async {
+    // La campana de la próxima cuenta no debe mostrar el contador de esta.
+    NotificacionService.noLeidas.value = 0;
+    FavoritoService.limpiar();
     await AuthService().logout();
     if (mounted) context.go('/login');
   }
@@ -96,22 +109,9 @@ class _MainShellPageState extends State<MainShellPage> {
   }
 
   // ---------------------------------------------------------------------------
-  // Secciones del cliente (secciones sin módulo en el servidor: "Próximamente")
+  // Secciones del cliente. Mis viajes queda "Próximamente": reservar requiere
+  // la pasarela de pago, que la app móvil no usa.
   // ---------------------------------------------------------------------------
-
-  static const ComingSoonPage _itinerarios = ComingSoonPage(
-    title: 'Itinerarios',
-    icon: Icons.map_outlined,
-    description: 'Organiza tus actividades y experiencias día por día.',
-    standalone: true,
-  );
-
-  static const ComingSoonPage _notificaciones = ComingSoonPage(
-    title: 'Notificaciones',
-    icon: Icons.notifications_none,
-    description: 'Confirmaciones de reserva, recordatorios y novedades de tus viajes.',
-    standalone: true,
-  );
 
   List<_Section> _sections(CurrentUser user) {
     if (user.isClient) {
@@ -136,11 +136,7 @@ class _MainShellPageState extends State<MainShellPage> {
           label: 'Favoritos',
           icon: Icons.favorite_border,
           selectedIcon: Icons.favorite,
-          page: ComingSoonPage(
-            title: 'Favoritos',
-            icon: Icons.favorite_border,
-            description: 'Guarda las experiencias que te gustan para reservarlas después.',
-          ),
+          page: const FavoritosPage(),
         ),
         _Section(
           label: 'Mi perfil',
@@ -195,17 +191,32 @@ class _MainShellPageState extends State<MainShellPage> {
       // Mismo orden que el menú del viajero en la web.
       return [
         sectionEntry(0), // Explorar
+        DrawerEntry(
+          label: 'Mis paquetes',
+          icon: Icons.card_giftcard,
+          onTap: () => _push(const PaquetesPage()),
+        ),
         sectionEntry(1), // Mis viajes
+        DrawerEntry(
+          label: 'Mis pagos',
+          icon: Icons.receipt_long_outlined,
+          onTap: () => _push(const MisPagosPage()),
+        ),
         DrawerEntry(
           label: 'Itinerarios',
           icon: Icons.map_outlined,
-          onTap: () => _push(_itinerarios),
+          onTap: () => _push(const ItinerariosPage()),
         ),
         sectionEntry(2), // Favoritos
         DrawerEntry(
           label: 'Notificaciones',
           icon: Icons.notifications_none,
-          onTap: () => _push(_notificaciones),
+          onTap: () => _push(const NotificacionesPage()),
+        ),
+        DrawerEntry(
+          label: 'Mis reseñas',
+          icon: Icons.rate_review_outlined,
+          onTap: () => _push(const MisResenasPage()),
         ),
         sectionEntry(3), // Mi perfil
       ];
@@ -273,7 +284,11 @@ class _MainShellPageState extends State<MainShellPage> {
     final index = _currentIndex < sections.length ? _currentIndex : 0;
 
     return Scaffold(
-      appBar: const SiturAppBar(title: 'SITUR-SMART'),
+      appBar: SiturAppBar(
+        title: 'SITUR-SMART',
+        // CU45: el viajero ve sus avisos sin leer desde cualquier sección.
+        actions: user.isClient ? const [NotificationBell()] : const [],
+      ),
       drawer: AppDrawer(
         user: user,
         entries: _drawerEntries(user, sections),

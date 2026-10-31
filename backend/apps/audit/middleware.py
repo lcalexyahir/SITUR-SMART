@@ -26,6 +26,8 @@ IGNORED_PREFIXES = (
     "/api/docs/",
     "/static/",
     "/favicon",
+    # La campana de la app consulta el contador cada minuto: no es una acción del usuario.
+    "/api/v1/notificaciones/no-leidas/",
 )
 
 VERBS = {
@@ -67,6 +69,44 @@ SPECIFIC_ACTIONS = (
     ("GET", r"^/api/v1/catalogo/productos/(\d+)/$", "Consultó el producto turístico #{id}"),
     ("GET", r"^/api/v1/catalogo/tipos/$", "Consultó los tipos de experiencia"),
     ("POST", r"^/api/v1/audit/log-seguro/$", "Consultó la bitácora confidencial"),
+    # CU35: calificaciones y reseñas.
+    ("GET", r"^/api/v1/catalogo/productos/(\d+)/resenas/$", "Consultó las reseñas del producto #{id}"),
+    ("POST", r"^/api/v1/catalogo/productos/(\d+)/resenas/$", "Calificó el producto turístico #{id}"),
+    ("GET", r"^/api/v1/resenas/mias/$", "Consultó sus reseñas"),
+    ("PUT", r"^/api/v1/resenas/(\d+)/$", "Editó su reseña #{id}"),
+    ("DELETE", r"^/api/v1/resenas/(\d+)/$", "Eliminó su reseña #{id}"),
+    # CU45: notificaciones y recordatorios.
+    ("GET", r"^/api/v1/notificaciones/$", "Consultó sus notificaciones"),
+    ("POST", r"^/api/v1/notificaciones/leer-todas/$", "Marcó todas sus notificaciones como leídas"),
+    ("POST", r"^/api/v1/notificaciones/limpiar-leidas/$", "Eliminó sus notificaciones leídas"),
+    ("POST", r"^/api/v1/notificaciones/(\d+)/leer/$", "Leyó la notificación #{id}"),
+    ("DELETE", r"^/api/v1/notificaciones/(\d+)/$", "Eliminó la notificación #{id}"),
+    # Favoritos.
+    ("GET", r"^/api/v1/favoritos/$", "Consultó sus favoritos"),
+    ("PUT", r"^/api/v1/favoritos/(\d+)/$", "Agregó a favoritos el producto #{id}"),
+    ("DELETE", r"^/api/v1/favoritos/(\d+)/$", "Quitó de favoritos el producto #{id}"),
+    # Itinerarios.
+    ("GET", r"^/api/v1/itinerarios/$", "Consultó sus itinerarios"),
+    ("POST", r"^/api/v1/itinerarios/$", "Creó un itinerario"),
+    ("GET", r"^/api/v1/itinerarios/(\d+)/$", "Consultó el itinerario #{id}"),
+    ("PUT", r"^/api/v1/itinerarios/(\d+)/$", "Modificó el itinerario #{id}"),
+    ("DELETE", r"^/api/v1/itinerarios/(\d+)/$", "Eliminó el itinerario #{id}"),
+    ("POST", r"^/api/v1/itinerarios/(\d+)/actividades/$", "Agregó una actividad al itinerario #{id}"),
+    ("PUT", r"^/api/v1/itinerarios/(\d+)/actividades/\d+/$", "Modificó una actividad del itinerario #{id}"),
+    ("DELETE", r"^/api/v1/itinerarios/(\d+)/actividades/\d+/$", "Eliminó una actividad del itinerario #{id}"),
+    # CU39: paquetes personalizados.
+    ("GET", r"^/api/v1/paquetes/$", "Consultó sus paquetes personalizados"),
+    ("POST", r"^/api/v1/paquetes/$", "Creó un paquete personalizado"),
+    ("GET", r"^/api/v1/paquetes/catalogo/$", "Buscó servicios para su paquete"),
+    ("GET", r"^/api/v1/paquetes/(\d+)/$", "Consultó el paquete personalizado #{id}"),
+    ("PUT", r"^/api/v1/paquetes/(\d+)/$", "Modificó el paquete personalizado #{id}"),
+    ("DELETE", r"^/api/v1/paquetes/(\d+)/$", "Eliminó el paquete personalizado #{id}"),
+    ("POST", r"^/api/v1/paquetes/(\d+)/componentes/$", "Agregó un servicio al paquete #{id}"),
+    ("DELETE", r"^/api/v1/paquetes/(\d+)/componentes/\d+/$", "Quitó un servicio del paquete #{id}"),
+    ("POST", r"^/api/v1/paquetes/(\d+)/cotizar/$", "Cotizó el paquete personalizado #{id}"),
+    # Historial de pagos.
+    ("GET", r"^/api/v1/pagos/$", "Consultó su historial de pagos"),
+    ("GET", r"^/api/v1/pagos/(\d+)/$", "Consultó el pago #{id}"),
 )
 
 RESOURCE_NAMES = {
@@ -77,6 +117,12 @@ RESOURCE_NAMES = {
     "permissions": "permisos",
     "catalogo": "el catálogo",
     "audit": "la bitácora",
+    "resenas": "sus reseñas",
+    "notificaciones": "sus notificaciones",
+    "favoritos": "sus favoritos",
+    "itinerarios": "sus itinerarios",
+    "paquetes": "sus paquetes",
+    "pagos": "sus pagos",
 }
 
 _COMPILED = [(method, re.compile(pattern), text) for method, pattern, text in SPECIFIC_ACTIONS]

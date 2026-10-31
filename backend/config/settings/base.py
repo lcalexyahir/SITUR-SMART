@@ -67,6 +67,12 @@ INSTALLED_APPS = [
     "apps.rbac",
     "apps.audit",
     "apps.catalogo",
+    "apps.resenas",
+    "apps.notificaciones",
+    "apps.favoritos",
+    "apps.itinerarios",
+    "apps.paquetes",
+    "apps.pagos",
 ]
 
 MIDDLEWARE = [

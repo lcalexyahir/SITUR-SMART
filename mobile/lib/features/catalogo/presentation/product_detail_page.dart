@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../favoritos/presentation/favorite_button.dart';
+import '../../itinerarios/presentation/agregar_a_itinerario_sheet.dart';
+import '../../resenas/presentation/product_reviews_section.dart';
 import '../models/product.dart';
 import 'explore_page.dart';
 
@@ -47,7 +50,10 @@ class ProductDetailPage extends StatelessWidget {
     final descripcion = (product.descripcion ?? '').trim();
 
     return Scaffold(
-      appBar: AppBar(title: Text(product.tipo.nombre)),
+      appBar: AppBar(
+        title: Text(product.tipo.nombre),
+        actions: [FavoriteButton(productoId: product.id)],
+      ),
       body: ListView(
         padding: EdgeInsets.zero,
         children: [
@@ -75,6 +81,16 @@ class ProductDetailPage extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => mostrarAgregarAItinerario(
+                    context,
+                    productoId: product.id,
+                    productoNombre: product.nombre,
+                  ),
+                  icon: const Icon(Icons.playlist_add),
+                  label: const Text('Agregar a mi itinerario'),
+                ),
                 const Divider(height: 32),
                 _info(Icons.place_outlined, 'Ubicación', product.ubicacion),
                 _info(Icons.storefront_outlined, 'Ofrecido por', product.empresaNombre),
@@ -86,6 +102,12 @@ class ProductDetailPage extends StatelessWidget {
                 Text(
                   descripcion.isEmpty ? 'La empresa todavía no agregó una descripción.' : descripcion,
                   style: const TextStyle(fontSize: 15, height: 1.5, color: AppTheme.labelColor),
+                ),
+                const Divider(height: 40),
+                // CU35: calificaciones y reseñas de otros viajeros.
+                ProductReviewsSection(
+                  productoId: product.id,
+                  productoNombre: product.nombre,
                 ),
               ],
             ),
